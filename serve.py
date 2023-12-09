@@ -99,7 +99,7 @@ async def handle_query(request: Request):
 app = Starlette(debug=True,
                 routes=[
                     Route('/', lambda _request: JSONResponse({"test": "ok"}), methods=["GET"]),
-                    Route("query", handle_query, methods=["POST"])
+                    Route("/query", handle_query, methods=["POST"])
                 ],
                 lifespan=lifespan)    # type: ignore
 
