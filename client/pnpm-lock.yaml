@@ -11,6 +11,9 @@ dependencies:
   danfojs:
     specifier: ^1.1.2
     version: 1.1.2(seedrandom@3.0.5)
+  fp-ts:
+    specifier: ^2.16.1
+    version: 2.16.1
 
 devDependencies:
   '@apache-arrow/ts':
@@ -1500,6 +1503,10 @@ packages:
       asynckit: 0.4.0
       combined-stream: 1.0.8
       mime-types: 2.1.35
+
+  /fp-ts@2.16.1:
+    resolution: {integrity: sha512-by7U5W8dkIzcvDofUcO42yl9JbnHTEDBrzu3pt5fKT+Z4Oy85I21K80EYJYdjQGC2qum4Vo55Ag57iiIK4FYuA==}
+    dev: false
 
   /frac@1.1.2:
     resolution: {integrity: sha512-w/XBfkibaTl3YDqASwfDUqkna4Z2p9cFSr1aHDt0WoMTECnRfBOv2WArlZILlqgWlmdIlALXGpM2AOhEk5W3IA==}

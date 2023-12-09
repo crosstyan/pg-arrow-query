@@ -1,6 +1,9 @@
-import { tableFromIPC } from "apache-arrow"
+import { Data, tableFromIPC } from "apache-arrow"
+import { assert } from "console"
 import danfo from "danfojs"
 import { DataFrame } from "danfojs"
+import { Some, None, Option, some, none, isNone, isSome } from "fp-ts/Option"
+import { cons } from "fp-ts/lib/ReadonlyNonEmptyArray"
 
 const API_URL = 'http://127.0.0.1:8000/query'
 const ARROW_CONTENT_TYPE = 'application/vnd.apache.arrow.file'
@@ -8,6 +11,19 @@ const ARROW_CONTENT_TYPE = 'application/vnd.apache.arrow.file'
 interface QueryBody {
   sql: string
 }
+
+
+// From https://gist.github.com/srikumarks/4303229
+// Assumes a valid matrix and returns its dimension array.
+// Won't work for irregular matrices, but is cheap.
+function dim(mat) {
+    if (mat instanceof Array) {
+        return [mat.length].concat(dim(mat[0]));
+    } else {
+        return [];
+    }
+}
+
 
 const main = async () => {
   const query = `--sql
@@ -39,7 +55,24 @@ const main = async () => {
     const table = tableFromIPC(await table_response.arrayBuffer())
     // console.log(table)
     // console.log(table.schema.fields)
-    console.table(table.slice(0, 5).toArray()) 
+    let df: Option<DataFrame> = none
+    table.schema.fields.forEach((field) => {
+      const column = table.getChild(field.name)
+      assert(column != null)
+      // console.log(`Adding column ${field.name} with length ${column.length}`)
+      let val = Array.from(column.toArray())
+      if (typeof val[0] === 'bigint') {
+        val = val.map((x) => Number(x))
+      }
+      if (isNone(df)) {
+        df = some(new DataFrame({ [field.name]: val }))
+      } else {
+        df.value.addColumn(field.name, val, { inplace: true })
+      }
+    })
+    if (isSome(df)) {
+      df.value.describe().print()
+    }
   }
 }
 

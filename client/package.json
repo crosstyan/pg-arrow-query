@@ -13,7 +13,8 @@
   "license": "ISC",
   "dependencies": {
     "apache-arrow": "^14.0.1",
-    "danfojs": "^1.1.2"
+    "danfojs": "^1.1.2",
+    "fp-ts": "^2.16.1"
   },
   "devDependencies": {
     "@apache-arrow/ts": "^14.0.1",
