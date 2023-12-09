@@ -87,7 +87,6 @@ def oid_to_arrow(oid: int) -> Optional[pa.DataType]:
 
 
 async def get_arrow_by_sql(pool: AsyncConnectionPool, sql: str) -> pa.Table:
-  # https://stackoverflow.com/questions/76758084/how-to-send-arrow-data-from-fastapi-to-the-js-apache-arrow-package-without-copyi
   async with pool.connection() as conn:
     async with conn.cursor() as cur:
       await cur.execute(sql)    # type: ignore
