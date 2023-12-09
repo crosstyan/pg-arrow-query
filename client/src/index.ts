@@ -1,5 +1,6 @@
-import { tableFromIPC } from "apache-arrow";
-import { assert } from "console"
+import { tableFromIPC } from "apache-arrow"
+import danfo from "danfojs"
+import { DataFrame } from "danfojs"
 
 const API_URL = 'http://127.0.0.1:8000/query'
 const ARROW_CONTENT_TYPE = 'application/vnd.apache.arrow.file'
@@ -20,23 +21,25 @@ const main = async () => {
   GROUP BY t.id, artist_id, t.name, post_count;
   `
 
-  const query_body = {sql: query}
+  const query_body = { sql: query }
 
-  const table = await fetch(API_URL, {
+  const table_response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({query_body})
+    body: JSON.stringify({ query_body })
   })
 
-  const response_context_type = table.headers.get('Content-Type')
+  const response_context_type = table_response.headers.get('Content-Type')
   if (response_context_type !== ARROW_CONTENT_TYPE) {
-    const body = await table.text()
+    const body = await table_response.text()
     console.error(body)
   } else {
-    const table_json = tableFromIPC(await table.arrayBuffer())
-    console.log(table_json)
+    const table = tableFromIPC(await table_response.arrayBuffer())
+    // console.log(table)
+    // console.log(table.schema.fields)
+    console.table(table.slice(0, 5).toArray()) 
   }
 }
 

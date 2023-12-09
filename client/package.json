@@ -12,7 +12,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "apache-arrow": "^14.0.1"
+    "apache-arrow": "^14.0.1",
+    "danfojs": "^1.1.2"
   },
   "devDependencies": {
     "@apache-arrow/ts": "^14.0.1",
