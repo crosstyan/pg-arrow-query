@@ -18,7 +18,8 @@ import click
 import tomli
 import sys
 import asyncio
-from utils.db import Config, to_kv_str
+import pyarrow as pa
+from utils.db import Config, to_kv_str, get_arrow_by_sql
 import psycopg
 from psycopg import AsyncConnection
 from psycopg_pool import AsyncConnectionPool
