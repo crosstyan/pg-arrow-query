@@ -28,16 +28,22 @@ import psycopg
 from pydantic import BaseModel
 from pydantic import ValidationError
 from psycopg import AsyncConnection
+import io
 from psycopg_pool import AsyncConnectionPool
 
 logger = logging.getLogger('uvicorn')
 config_path: Optional[Path] = None
 pg_conn_pool: Optional[AsyncConnectionPool] = None
 
+# default 131_072
+MAX_CHUNK_SIZE = 131_072
+# MAX_CHUNK_SIZE = 1024
+
 
 @contextlib.asynccontextmanager
 async def lifespan(_app: Starlette):
   logger.info("lifespan starts")
+  logger.info(f"pyarrow version: {pa.__version__}")
   global pg_conn_pool
   assert config_path is not None
   with open(config_path, 'rb') as f:
@@ -56,6 +62,8 @@ class QueryBody(BaseModel):
 
 async def handle_query(request: Request):
   # https://www.iana.org/assignments/media-types/application/vnd.apache.arrow.file
+  # actually you don't need to use the stupid `BufferOutputStream`
+  # just use `io.BytesIO`
   # https://stackoverflow.com/questions/76758084/how-to-send-arrow-data-from-fastapi-to-the-js-apache-arrow-package-without-copyi
   try:
     content_type = request.headers.get("Content-Type")
@@ -63,7 +71,7 @@ async def handle_query(request: Request):
     if content_type is None or "text/plain" in content_type:
       query = bytes.decode(await request.body(), encoding="utf-8")
     elif "json" in content_type:
-      body = await request.json()
+      body = (await request.json()).get("query_body")
       query_body = QueryBody.model_validate(body)
       query = query_body.sql
 
@@ -75,16 +83,20 @@ async def handle_query(request: Request):
 
     table: pa.Table
     table = await get_arrow_by_sql(pg_conn_pool, query)
-    sink = pa.BufferOutputStream()
 
     async def gen():
-      with ipc.new_stream(sink, table.schema) as writer:
-        for batch in table.to_batches():
+      with io.BytesIO() as sink:
+        writer = pa.ipc.new_stream(sink, table.schema)
+        for batch in table.to_batches(max_chunksize=MAX_CHUNK_SIZE):
           writer.write_batch(batch)
           yield sink.getvalue()
-          sink.clear()
+          # effectively reset the buffer to empty
+          sink.truncate(0)
+          sink.seek(0)
 
-    stream = StreamingResponse(gen(), media_type="application/vnd.apache.arrow.file")
+    generator = gen()
+
+    stream = StreamingResponse(generator, media_type="application/vnd.apache.arrow.file")
     return stream
   except HTTPException as e:
     return JSONResponse({"error": e.detail}, status_code=e.status_code)

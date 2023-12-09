@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node build/src/index.js"
+    "start": "node build/index.js",
+    "watch:tsc": "tsc -p . -w",
+    "watch": "concurrently \"npm:watch:tsc\""
   },
   "keywords": [],
   "author": "",
