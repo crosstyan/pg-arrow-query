@@ -94,9 +94,7 @@ async def handle_query(request: Request):
           sink.truncate(0)
           sink.seek(0)
 
-    generator = gen()
-
-    stream = StreamingResponse(generator, media_type="application/vnd.apache.arrow.file")
+    stream = StreamingResponse(gen(), media_type="application/vnd.apache.arrow.file")
     return stream
   except HTTPException as e:
     return JSONResponse({"error": e.detail}, status_code=e.status_code)
