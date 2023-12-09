@@ -1,0 +1,6 @@
+pyarrow
+polars
+# psycopg 3
+psycopg
+tomli
+broadcaster
