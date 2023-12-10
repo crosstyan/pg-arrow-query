@@ -26,67 +26,6 @@ function encodeCallMessage(msg: CallMessage): ArrayBuffer {
   return data
 }
 
-function decodeCallMessage(data: ArrayBuffer): Result<CallMessage> {
-  const res = CBOR.decode(data)
-
-  if (res.length < 4) {
-    const err: RpcError = {
-      code: E.BadLength,
-    }
-    return left(err)
-  }
-
-  const [magic, msg_id, method, params] = res
-  if (typeof magic !== "number") {
-    const err: RpcError = {
-      code: E.BadType,
-      message: "magic number is not a number",
-    }
-    return left(err)
-  }
-
-  const values: number[] = Object.values(MagicNumbers)
-  if (!values.includes(magic)) {
-    const err: RpcError = {
-      code: E.BadMagicNumber,
-      message: `magic number ${magic} is not in ${MagicNumbers}`,
-    }
-    return left(err)
-  }
-
-  if (typeof msg_id !== "number") {
-    const err: RpcError = {
-      code: E.BadType,
-      message: "msg_id is not a number",
-    }
-    return left(err)
-  }
-
-
-  if (!(typeof method === "string" || typeof method === "number")) {
-    const err: RpcError = {
-      code: E.BadType,
-      message: "method is not a string or number",
-    }
-    return left(err)
-  }
-
-  if (!Array.isArray(params)) {
-    const err: RpcError = {
-      code: E.BadType,
-      message: "params is not an array",
-    }
-    return left(err)
-  }
-
-  return right({
-    msg_id,
-    method,
-    params,
-  })
-}
-
-
 type ResultMessage<T> = {
   msg_id: number
   error?: RpcError
@@ -134,15 +73,32 @@ function decodeResult(data: ArrayBuffer): Result<ResultMessage<any>> {
   if (res.length < 4) {
     const err: RpcError = {
       code: E.BadLength,
+      extra: {
+        data,
+      }
     }
     return left(err)
   }
 
   const [magic, msg_id, error, result] = res
+  const extra = {
+    data,
+    res
+  }
   if (typeof magic !== "number") {
     const err: RpcError = {
       code: E.BadType,
       message: "magic number is not a number",
+      extra,
+    }
+    return left(err)
+  }
+
+  if (magic !== MagicNumbers.response) {
+    const err: RpcError = {
+      code: E.BadMagicNumber,
+      message: `magic number ${magic} is not ${MagicNumbers.response}`,
+      extra,
     }
     return left(err)
   }
@@ -152,6 +108,7 @@ function decodeResult(data: ArrayBuffer): Result<ResultMessage<any>> {
     const err: RpcError = {
       code: E.BadMagicNumber,
       message: `magic number ${magic} is not in ${MagicNumbers}`,
+      extra,
     }
     return left(err)
   }
@@ -160,6 +117,7 @@ function decodeResult(data: ArrayBuffer): Result<ResultMessage<any>> {
     const err: RpcError = {
       code: E.BadType,
       message: "msg_id is not a number",
+      extra,
     }
     return left(err)
   }

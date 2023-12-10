@@ -79,11 +79,19 @@ const doQuery = async () => {
 const doRpc = async () => {
   const WS_URL = "ws://127.0.0.1:8000/ws"
   const caller = new CborRpcCaller(WS_URL)
-  while (!caller.wsOpend()){
-    await new Promise(resolve => setTimeout(resolve, 100));
+  while (!caller.wsOpend()) {
+    await new Promise(resolve => setTimeout(resolve, 100))
   }
   // const result = await caller.call("log", "fuck", "me")
-  const result = await caller.call("listFns")
+  const code = `
+  function fn(){
+    const node = LiteGraph.createNode("basic/Example")
+    graph.add(node)
+    return node.id
+  }
+  fn()
+  `
+  const result = await caller.call("eval", code)
   console.log(result)
   caller.close()
 }
