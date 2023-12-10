@@ -2,8 +2,9 @@ import { Data, tableFromIPC } from "apache-arrow"
 import { assert } from "console"
 import danfo from "danfojs"
 import { DataFrame } from "danfojs"
+import { ArrayType1D } from "danfojs/dist/danfojs-base/shared/types"
 import { Some, None, Option, some, none, isNone, isSome } from "fp-ts/Option"
-import { cons } from "fp-ts/lib/ReadonlyNonEmptyArray"
+import CborRpcCaller from "./cborpc"
 
 const API_URL = 'http://127.0.0.1:8000/query'
 const ARROW_CONTENT_TYPE = 'application/vnd.apache.arrow.file'
@@ -17,15 +18,14 @@ interface QueryBody {
 // Assumes a valid matrix and returns its dimension array.
 // Won't work for irregular matrices, but is cheap.
 function dim(mat) {
-    if (mat instanceof Array) {
-        return [mat.length].concat(dim(mat[0]));
-    } else {
-        return [];
-    }
+  if (mat instanceof Array) {
+    return [mat.length].concat(dim(mat[0]))
+  } else {
+    return []
+  }
 }
 
-
-const main = async () => {
+const doQuery = async () => {
   const query = `--sql
   SELECT t.name    as tag_name,
        post_count
@@ -60,7 +60,7 @@ const main = async () => {
       const column = table.getChild(field.name)
       assert(column != null)
       // console.log(`Adding column ${field.name} with length ${column.length}`)
-      let val = Array.from(column.toArray())
+      let val = Array.from(column.toArray()) as ArrayType1D
       if (typeof val[0] === 'bigint') {
         val = val.map((x) => Number(x))
       }
@@ -74,6 +74,23 @@ const main = async () => {
       df.value.describe().print()
     }
   }
+}
+
+const doRpc = async () => {
+  const WS_URL = "ws://127.0.0.1:8000/ws"
+  const caller = new CborRpcCaller(WS_URL)
+  while (!caller.wsOpend()){
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  // const result = await caller.call("log", "fuck", "me")
+  const result = await caller.call("listFns")
+  console.log(result)
+  caller.close()
+}
+
+const main = async () => {
+  // await doQuery()
+  await doRpc()
 }
 
 // https://stackoverflow.com/questions/4981891/node-js-equivalent-of-pythons-if-name-main
