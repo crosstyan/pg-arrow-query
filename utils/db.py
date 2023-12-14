@@ -103,3 +103,17 @@ async def get_arrow_by_sql(pool: AsyncConnectionPool, sql: str) -> pa.Table:
       schema = pa.schema(schema_dict)
       pat = pa.Table.from_pydict(dict(zip(column_names, zip(*rows))), schema=schema)
       return pat
+
+
+async def get_by_sql(pool: AsyncConnectionPool, sql: str) -> tuple[list[str], list[Any]]:
+  async with pool.connection() as conn:
+    async with conn.cursor() as cur:
+      await cur.execute(sql)    # type: ignore
+      rows = await cur.fetchall()
+      assert cur.description is not None
+      # https://www.psycopg.org/psycopg3/docs/api/objects.html#the-description-column-object
+      # https://peps.python.org/pep-0249/#type-objects-and-constructors
+      # https://peps.python.org/pep-0249/#description
+      column_names:list[str] = [desc[0] for desc in cur.description]
+      return column_names, rows
+      
