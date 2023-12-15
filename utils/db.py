@@ -81,8 +81,9 @@ def oid_to_arrow(oid: int) -> Optional[pa.DataType]:
     return pa.timestamp("us")
   elif oid == BYTEA_OID:
     return pa.binary()
+  elif oid == JSON_OID:
+    return pa.string()
   else:
-    logger.warning(f"Unknown OID: {oid}")
     return None
 
 
@@ -96,12 +97,10 @@ async def get_arrow_by_sql(pool: AsyncConnectionPool, sql: str) -> pa.Table:
       # https://peps.python.org/pep-0249/#type-objects-and-constructors
       # https://peps.python.org/pep-0249/#description
       column_names = [desc[0] for desc in cur.description]
-      column_types = [oid_to_arrow(desc[1]) for desc in cur.description]
-      assert all(t is not None for t in column_types), f"bad type for {cur.description}"
       # https://stackoverflow.com/questions/57939092/fastest-way-to-construct-pyarrow-table-row-by-row
-      schema_dict = zip(column_names, column_types)
-      schema = pa.schema(schema_dict)
-      pat = pa.Table.from_pydict(dict(zip(column_names, zip(*rows))), schema=schema)
+      # pyarrow could infer the schema from dict
+      # don't have to do the schema manually
+      pat = pa.Table.from_pydict(dict(zip(column_names, zip(*rows))))
       return pat
 
 

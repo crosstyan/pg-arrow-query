@@ -11,6 +11,10 @@ from starlette.responses import JSONResponse, StreamingResponse, AsyncContentStr
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.routing import Route, WebSocketRoute
 from starlette.exceptions import HTTPException
+from starlette.middleware import Middleware
+from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
 from starlette.concurrency import run_until_first_complete, run_in_threadpool
@@ -27,6 +31,7 @@ from pydantic import BaseModel
 from pydantic import ValidationError
 from psycopg import AsyncConnection
 import io
+import ujson
 from psycopg_pool import AsyncConnectionPool
 from broadcaster import Broadcast, Event
 
@@ -187,7 +192,12 @@ async def handle_query(request: Request):
       column_names: list[str]
       rows: list[tuple[Any, ...]]
       column_names, rows = await get_by_sql(pg_conn_pool, query)
-      return JSONResponse({"names": column_names, "rows": rows})
+      r = {"names": column_names, "rows": rows}
+      def row_datetime_to_iso(row: tuple[Any, ...]) -> tuple[Any, ...]:
+        return tuple(map(lambda x: x.isoformat() if isinstance(x, datetime) else x, row))
+      r["rows"] = list(map(row_datetime_to_iso, r["rows"]))
+      b = ujson.dumps(r)
+      return Response(b, media_type="application/json")
 
     if get_accept_type() == "arrow":
       return await ret_arrow()
@@ -203,12 +213,22 @@ async def handle_query(request: Request):
     return JSONResponse({"error": str(e)}, status_code=500)
 
 
+middleware = [
+      Middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    ),
+]
 app = Starlette(debug=True,
                 routes=[
                     Route('/', lambda _request: JSONResponse({"test": "ok"}), methods=["GET"]),
                     Route("/query", handle_query, methods=["POST"]),
                     WebSocketRoute("/ws", ws_handler, name="ws"),
                 ],
+                middleware=middleware,
                 lifespan=lifespan)    # type: ignore
 
 

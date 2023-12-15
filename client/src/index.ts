@@ -26,15 +26,59 @@ function dim(mat) {
 }
 
 const doQuery = async () => {
+  // const query = `--sql
+  // SELECT t.name    as tag_name,
+  //      post_count
+  // FROM booru.artists
+  //         INNER JOIN booru.artist_tags_assoc ata on artists.id = ata.artist_id
+  //         INNER JOIN booru.tags t on ata.tag_id = t.id
+  //         -- INNER JOIN booru.tag_post_counts tpc on t.id = tpc.tag_id
+  //         INNER JOIN booru.view_posts_count_illustration_only tpc on t.id = tpc.tag_id
+  // GROUP BY t.id, artist_id, t.name, post_count;
+  // `
   const query = `--sql
-  SELECT t.name    as tag_name,
-       post_count
-  FROM booru.artists
-          INNER JOIN booru.artist_tags_assoc ata on artists.id = ata.artist_id
-          INNER JOIN booru.tags t on ata.tag_id = t.id
-          -- INNER JOIN booru.tag_post_counts tpc on t.id = tpc.tag_id
-          INNER JOIN booru.view_posts_count_illustration_only tpc on t.id = tpc.tag_id
-  GROUP BY t.id, artist_id, t.name, post_count;
+WITH artist AS (SELECT *
+                FROM booru.artists_with_n_posts
+                ORDER BY random()
+                LIMIT 1),
+     artist_posts_with_tags_id AS (SELECT ap.post_id,
+                                          ap.score,
+                                          ap.fav_count,
+                                          ap.tag_ids,
+                                          ap.created_at,
+                                          ap.file_url,
+                                          ap.preview_file_url
+                                   FROM booru.view_modern_posts_illustration_only_extra ap
+                                   WHERE ap.tag_ids && ARRAY(SELECT tag_id FROM artist)),
+
+     -- translate tag id to tag name
+     artist_posts_with_tags AS (SELECT ap.post_id,
+                                       (SELECT array_agg(name)
+                                        FROM booru.tags
+                                        WHERE id = ANY (tag_ids)
+                                          AND category = 1) as artist_tags,
+                                       ap.score,
+                                       ap.fav_count,
+                                       (SELECT array_agg(name)
+                                        FROM booru.tags
+                                        WHERE id = ANY (tag_ids)
+                                          AND category = 0) as general_tags,
+                                       (SELECT array_agg(name)
+                                        FROM booru.tags
+                                        WHERE id = ANY (tag_ids)
+                                          AND category = 3) as copyright_tags,
+                                       (SELECT array_agg(name)
+                                        FROM booru.tags
+                                        WHERE id = ANY (tag_ids)
+                                          AND category = 4) as characters_tags,
+                                       ap.created_at,
+                                       ap.file_url,
+                                       ap.preview_file_url
+                                FROM artist_posts_with_tags_id as ap)
+SELECT *
+FROM artist_posts_with_tags
+LIMIT 50;
+
   `
 
   const query_body = { sql: query }
@@ -42,7 +86,8 @@ const doQuery = async () => {
   const table_response = await fetch(API_URL, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      "Content-Type": "application/json",
+      "Accept": "application/vnd.apache.arrow.file",
     },
     body: JSON.stringify({ query_body })
   })
@@ -53,8 +98,8 @@ const doQuery = async () => {
     console.error(body)
   } else {
     const table = tableFromIPC(await table_response.arrayBuffer())
-    // console.log(table)
-    // console.log(table.schema.fields)
+    console.log(table)
+    console.log(table.schema.fields)
     let df: Option<DataFrame> = none
     table.schema.fields.forEach((field) => {
       const column = table.getChild(field.name)
@@ -97,8 +142,8 @@ const doRpc = async () => {
 }
 
 const main = async () => {
-  // await doQuery()
-  await doRpc()
+  await doQuery()
+  // await doRpc()
 }
 
 // https://stackoverflow.com/questions/4981891/node-js-equivalent-of-pythons-if-name-main
