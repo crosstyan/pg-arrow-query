@@ -16,8 +16,9 @@ class FileConfig(BaseModel):
 
 
 class FileErrorCode(Enum):
-  Runtime = auto()
-  FileNotFount = 404
+  RUNTIME_ERROR = auto()
+  EOF = auto()
+  FILE_NOT_FOUND = 404
 
 
 class FileError(BaseModel):

@@ -22,7 +22,6 @@ async def cbor_ws_handler(ws: WebSocket, broadcast: Optional[Broadcast]):
   # https://github.com/encode/starlette/commit/3f6d4f5969d8c153477c534a31fc50925843f7b0
   # https://github.com/encode/starlette/pull/1443
   # https://github.com/florimondmanca/arel/issues/26
-  await ws.accept()
   await run_until_first_complete((cbor_ws_receiver, {
       "websocket": ws,
       "broadcast": broadcast
