@@ -2,3 +2,7 @@
 dbname = "danbooru"
 user = "postgres"
 password = "postgres"
+
+[[files]]
+key = "/"
+path = '''C:\Users\cross\Desktop\code\Kohaku-NAI\data'''

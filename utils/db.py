@@ -16,16 +16,6 @@ from psycopg_pool import AsyncConnectionPool
 import os
 
 
-class DatabaseConfig(BaseModel):
-  dbname: str
-  user: str
-  password: Optional[str]
-
-
-class Config(BaseModel):
-  database: DatabaseConfig
-
-
 def to_kv_str(d: Dict[str, str]) -> str:
   """Convert dictionary to key-value string"""
   return " ".join(f"{k}={v}" for k, v in d.items())
@@ -113,6 +103,5 @@ async def get_by_sql(pool: AsyncConnectionPool, sql: str) -> tuple[list[str], li
       # https://www.psycopg.org/psycopg3/docs/api/objects.html#the-description-column-object
       # https://peps.python.org/pep-0249/#type-objects-and-constructors
       # https://peps.python.org/pep-0249/#description
-      column_names:list[str] = [desc[0] for desc in cur.description]
+      column_names: list[str] = [desc[0] for desc in cur.description]
       return column_names, rows
-      
